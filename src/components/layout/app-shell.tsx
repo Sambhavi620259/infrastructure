@@ -6,16 +6,19 @@ import type { ComponentType, ReactNode, SVGProps } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   BellIcon,
+  ArrowPathRoundedSquareIcon,
   ArrowRightStartOnRectangleIcon,
   BuildingOffice2Icon,
   ChevronDownIcon,
   Cog6ToothIcon,
   ComputerDesktopIcon,
   CubeIcon,
+  CheckCircleIcon,
+  ClipboardDocumentCheckIcon,
+  ClockIcon,
   DocumentChartBarIcon,
   FolderIcon,
   MagnifyingGlassIcon,
-  ServerStackIcon,
   ShieldCheckIcon,
   Squares2X2Icon,
   TicketIcon,
@@ -32,14 +35,44 @@ type NavigationItem = readonly [label: string, href: string, icon: ComponentType
 
 const itNavigation: readonly NavigationItem[] = [
   ["Dashboard", routes.dashboard, Squares2X2Icon],
-  ["Assets", routes.assets, CubeIcon],
-  ["Software", routes.software, ComputerDesktopIcon],
-  ["Discovery", routes.discovery, MagnifyingGlassIcon],
-  ["Cloud", routes.cloud, ServerStackIcon],
-  ["Financial", routes.financial, DocumentChartBarIcon],
+  ["Tickets", routes.tickets, TicketIcon],
+  ["Users", routes.users, UserGroupIcon],
+  ["Inventory", routes.inventory, FolderIcon],
   ["Reports", routes.reports, FolderIcon],
-  ["Users & Roles", routes.users, UserGroupIcon],
   ["Settings", routes.settings, Cog6ToothIcon],
+] as const;
+
+const assetNavigation: readonly NavigationItem[] = [
+  ["All Assets", routes.assets, CubeIcon],
+  ["Add New Asset", routes.assetNew, CubeIcon],
+  ["Asset Assignment", routes.assetAssignment, UserGroupIcon],
+  ["Asset Audit", routes.assetAudit, ClipboardDocumentCheckIcon],
+  ["Asset Lifecycle", routes.assetLifecycle, ArrowPathRoundedSquareIcon],
+  ["Warranty / AMC", routes.assetWarranty, ShieldCheckIcon],
+  ["Asset History", routes.assetHistory, ClockIcon],
+  ["Asset Status", routes.assetStatus, CheckCircleIcon],
+] as const;
+
+const ticketNavigation: readonly NavigationItem[] = [
+  ["Ticket Dashboard", routes.ticketDashboard, Squares2X2Icon],
+  ["All Tickets", routes.tickets, TicketIcon],
+  ["My Tickets", routes.ticketMine, TicketIcon],
+  ["Create New Ticket", routes.ticketNew, TicketIcon],
+] as const;
+
+const userNavigation: readonly NavigationItem[] = [
+  ["All Users", routes.users, UserGroupIcon],
+  ["Add User", routes.userNew, UserGroupIcon],
+  ["Departments / Teams", routes.userDepartments, BuildingOffice2Icon],
+] as const;
+
+const inventoryNavigation: readonly NavigationItem[] = [
+  ["Inventory Dashboard", routes.inventory, Squares2X2Icon],
+  ["Hardware Inventory", routes.inventoryHardware, CubeIcon],
+  ["Software Inventory", routes.inventorySoftware, ComputerDesktopIcon],
+  ["Stock / Available Items", routes.inventoryStock, FolderIcon],
+  ["Purchase Orders", routes.inventoryPurchaseOrders, DocumentChartBarIcon],
+  ["Vendors", routes.inventoryVendors, BuildingOffice2Icon],
 ] as const;
 
 const agentNavigation: readonly NavigationItem[] = [
@@ -75,6 +108,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
+  const [assetsOpen, setAssetsOpen] = useState(pathname.startsWith("/assets"));
+  const [ticketsOpen, setTicketsOpen] = useState(pathname.startsWith("/tickets"));
+  const [usersOpen, setUsersOpen] = useState(pathname.startsWith("/users"));
+  const [inventoryOpen, setInventoryOpen] = useState(pathname.startsWith("/inventory"));
 
   useEffect(() => {
     const session = getDemoSession();
@@ -89,6 +126,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     setMobileNavOpen(false);
     setProfileOpen(false);
     setNotificationOpen(false);
+    if (pathname.startsWith("/assets")) setAssetsOpen(true);
+    if (pathname.startsWith("/tickets")) setTicketsOpen(true);
+    if (pathname.startsWith("/users")) setUsersOpen(true);
+    if (pathname.startsWith("/inventory")) setInventoryOpen(true);
   }, [pathname]);
 
   useEffect(() => {
@@ -113,8 +154,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const workspace: Workspace = workspaceForRole(authenticatedUser?.role ?? roles.IT_ADMIN);
   const navigation = workspace === "super" ? superNavigation : workspace === "agent" ? agentNavigation : itNavigation;
   const searchResults = useMemo(
-    () => navigation.filter(([label]) => label.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 8),
-    [navigation, search],
+    () => (workspace === "it" ? [...itNavigation, ...assetNavigation, ...ticketNavigation, ...userNavigation, ...inventoryNavigation] : navigation).filter(([label]) => label.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 8),
+    [navigation, search, workspace],
   );
 
   const handleSearchNavigation = (href: string) => {
@@ -186,7 +227,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{workspace === "super" ? "Platform workspace" : workspace === "agent" ? "Agent workspace" : "IT operations"}</p>
         <nav className="space-y-1" aria-label={workspace === "super" ? "Super Admin navigation" : workspace === "agent" ? "IT Agent navigation" : "IT Admin navigation"}>
-          {navigation.map(([label, href, Icon]) => {
+          {workspace === "it" && itNavigation.filter(([label]) => label === "Dashboard").map(([label, href, Icon]) => <Link className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition ${isActiveRoute(pathname, href) ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}><Icon className="h-[17px] w-[17px]" />{label}</Link>)}
+          {workspace === "it" && <div>
+            <button type="button" data-feedback="off" onClick={() => setAssetsOpen((open) => !open)} aria-expanded={assetsOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition ${pathname.startsWith("/assets") ? "text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>
+              <CubeIcon className="h-[17px] w-[17px]" /> <span className="flex-1 text-left">Assets</span><ChevronDownIcon className={`h-4 w-4 transition ${assetsOpen ? "rotate-180" : ""}`} />
+            </button>
+            {assetsOpen && <div className="mt-1 space-y-0.5 border-l border-slate-200 pl-3 ml-4">{assetNavigation.map(([label, href]) => {
+              const active = pathname === href;
+              return <Link key={href} href={href} onClick={() => setMobileNavOpen(false)} aria-current={active ? "page" : undefined} className={`block rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${active ? "bg-brand-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>{label}</Link>;
+            })}</div>}
+          </div>}
+          {workspace === "it" && <div><button type="button" data-feedback="off" onClick={() => setTicketsOpen((open) => !open)} aria-expanded={ticketsOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition ${pathname.startsWith("/tickets") ? "text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}><TicketIcon className="h-[17px] w-[17px]" /><span className="flex-1 text-left">Tickets</span><ChevronDownIcon className={`h-4 w-4 transition ${ticketsOpen ? "rotate-180" : ""}`} /></button>{ticketsOpen && <div className="mt-1 ml-4 space-y-0.5 border-l border-slate-200 pl-3">{ticketNavigation.map(([label, href]) => <Link key={href} href={href} onClick={() => setMobileNavOpen(false)} className={`block rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${pathname === href ? "bg-brand-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>{label}</Link>)}</div>}</div>}
+          {workspace === "it" && <div><button type="button" data-feedback="off" onClick={() => setUsersOpen((open) => !open)} aria-expanded={usersOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition ${pathname.startsWith("/users") ? "text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}><UserGroupIcon className="h-[17px] w-[17px]" /><span className="flex-1 text-left">Users</span><ChevronDownIcon className={`h-4 w-4 transition ${usersOpen ? "rotate-180" : ""}`} /></button>{usersOpen && <div className="mt-1 ml-4 space-y-0.5 border-l border-slate-200 pl-3">{userNavigation.map(([label, href]) => <Link key={href} href={href} onClick={() => setMobileNavOpen(false)} className={`block rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${pathname === href ? "bg-brand-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>{label}</Link>)}</div>}</div>}
+          {workspace === "it" && <div><button type="button" data-feedback="off" onClick={() => setInventoryOpen((open) => !open)} aria-expanded={inventoryOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition ${pathname.startsWith("/inventory") ? "text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}><FolderIcon className="h-[17px] w-[17px]" /><span className="flex-1 text-left">Inventory</span><ChevronDownIcon className={`h-4 w-4 transition ${inventoryOpen ? "rotate-180" : ""}`} /></button>{inventoryOpen && <div className="mt-1 ml-4 space-y-0.5 border-l border-slate-200 pl-3">{inventoryNavigation.map(([label, href]) => <Link key={href} href={href} onClick={() => setMobileNavOpen(false)} className={`block rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${pathname === href ? "bg-brand-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>{label}</Link>)}</div>}</div>}
+          {(workspace === "it" ? navigation.filter(([label]) => !["Dashboard", "Tickets", "Users", "Inventory"].includes(label)) : navigation).map(([label, href, Icon]) => {
             const active = isActiveRoute(pathname, href);
             return (
               <Link
